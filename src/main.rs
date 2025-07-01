@@ -3,6 +3,7 @@ use dirs::home_dir;
 use std::env;
 use std::fs;
 use std::io::{self, Write};
+use std::num::Wrapping;
 use std::thread::sleep;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -62,13 +63,16 @@ fn isnumeric(s: &str) -> bool {
 }
 
 fn bitmixer(mut val: u128) -> u128 {
-    // bit mixer to fix the rng on some devices
-    val ^= val >> 71;
-    val *= 2293847102873847293;
-    val ^= val >> 17;
-    val *= 1717171717171771;
-    val ^= val >> 45;
-    val
+    // so that multiplying wont make the number go out of bounds
+    let mut wrappedval = Wrapping(val);
+    // bit mixer to fix the rng
+    wrappedval ^= wrappedval >> 71;
+    wrappedval *= Wrapping(2293847102873847293);
+    wrappedval ^= wrappedval >> 17;
+    wrappedval *= Wrapping(1717171717171771);
+    wrappedval ^= wrappedval >> 45;
+
+    wrappedval.0
 }
 
 fn readconfig(filename: &str) -> String {
