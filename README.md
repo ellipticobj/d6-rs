@@ -19,6 +19,9 @@ run
 d6
 ```
 
+## configuration
+
+
 ---
 
 made with rust btw haha
