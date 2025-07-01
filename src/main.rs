@@ -13,7 +13,7 @@ fn main() {
     // only show the animation if animations are enabled and if the terminal is interactive
     if animation && atty::is(Stream::Stdout) {
         let endtime = Instant::now() + Duration::from_secs_f32(animdur);
-        let interval = Duration::from_millis(10);
+        let interval = Duration::from_millis(30);
         while Instant::now() <= endtime {
             let nanos = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
