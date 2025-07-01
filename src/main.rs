@@ -17,9 +17,14 @@ fn main() {
     // if user runs d6 <int>, then set dicesize to the integer
     let args: Vec<String> = env::args().collect();
     if !args.is_empty() {
-        let intnum = &args[0];
+        let intnum = &args[1];
         if isnumeric(intnum) {
-            dicesize = intnum.parse().unwrap();
+            let newnum: u128 = intnum.parse().unwrap();
+            if newnum <= 0 {
+                eprintln!("cannot have less than 1 face. rolling a d6.")
+            } else {
+                dicesize = intnum.parse().unwrap();
+            }
         }
     }
 
