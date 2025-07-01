@@ -1,5 +1,6 @@
 use atty::Stream;
 use dirs::home_dir;
+use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::thread::sleep;
@@ -9,8 +10,22 @@ fn main() {
     // TODO: add a way to change these vars
     let faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
     let animdur: f32 = 0.6;
-    let dicesize = 6;
-    let animation = true;
+    let mut animation = true;
+    let mut dicesize: u128 = 6;
+
+    // if user runs d6 <int>, then set dicesize to the integer
+    let args: Vec<String> = env::args().collect();
+    if !args.is_empty() {
+        let intnum = &args[0];
+        if isnumeric(intnum) {
+            dicesize = intnum.parse().unwrap();
+        }
+    }
+
+    // if numebr of faces is not equal to size of dice, dont show animation
+    if faces.len() != dicesize as usize {
+        animation = false;
+    }
 
     // only show the animation if animations are enabled and if the terminal is interactive
     if animation && atty::is(Stream::Stdout) {
@@ -29,12 +44,12 @@ fn main() {
     }
 
     // generate pseudo random number using system time
-    let nanos = SystemTime::now()
+    let nanos: u128 = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
 
-    let finalroll = (nanos % dicesize) as usize;
+    let finalroll = (nanos % dicesize as u128) as usize;
     if atty::is(Stream::Stdout) {
         // interactive terminal
         println!("\r{} ({})", faces[finalroll], finalroll + 1);
@@ -42,6 +57,10 @@ fn main() {
         // only print the value if it is piped
         println!("{}", finalroll + 1);
     }
+}
+
+fn isnumeric(s: &str) -> bool {
+    s.chars().all(|c| c.is_digit(10))
 }
 
 fn readconfig(filename: &str) -> String {
