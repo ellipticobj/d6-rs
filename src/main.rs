@@ -10,7 +10,7 @@ fn main() {
     // TODO: add a way to change these vars
     let faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
     let animdur: f32 = 0.6;
-    let mut animation = true;
+    let animation = true;
     let mut dicesize: u128 = 6;
 
     // if user runs d6 <int>, then set dicesize to the integer
@@ -22,11 +22,6 @@ fn main() {
         }
     }
 
-    // if numebr of faces is not equal to size of dice, dont show animation
-    if faces.len() != dicesize as usize {
-        animation = false;
-    }
-
     // only show the animation if animations are enabled and if the terminal is interactive
     if animation && atty::is(Stream::Stdout) {
         let endtime = Instant::now() + Duration::from_secs_f32(animdur);
@@ -36,7 +31,8 @@ fn main() {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos();
-            let roll = (nanos % 6) as usize;
+            // use faces.len here so that roll doesnt go out of bounds
+            let roll = (bitmixer(nanos) % faces.len() as u128) as usize;
             print!("\r{}", faces[roll]);
             io::stdout().flush().unwrap();
             sleep(interval);
@@ -49,7 +45,9 @@ fn main() {
         .unwrap()
         .as_nanos();
 
-    let finalroll = (nanos % dicesize as u128) as usize;
+    let mixednanos: u128 = bitmixer(nanos);
+
+    let finalroll = (mixednanos % dicesize as u128) as usize;
     if atty::is(Stream::Stdout) {
         // interactive terminal
         println!("\r{} ({})", faces[finalroll], finalroll + 1);
@@ -61,6 +59,16 @@ fn main() {
 
 fn isnumeric(s: &str) -> bool {
     s.chars().all(|c| c.is_digit(10))
+}
+
+fn bitmixer(mut val: u128) -> u128 {
+    // bit mixer to fix the rng on some devices
+    val ^= val >> 71;
+    val *= 2293847102873847293;
+    val ^= val >> 17;
+    val *= 1717171717171771;
+    val ^= val >> 45;
+    val
 }
 
 fn readconfig(filename: &str) -> String {
