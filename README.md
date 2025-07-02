@@ -27,6 +27,6 @@ d6
 made with rust btw haha
 
 ## plans !
-- [ ] more dice options
 - [ ] customization? (animation time, output options, symbols)
+- [x] more dice options
 - [x] add a way to pipe just the value or to remove the symbol so bash scripting is easier

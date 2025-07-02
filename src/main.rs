@@ -7,21 +7,38 @@ use std::num::Wrapping;
 use std::thread::sleep;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+struct Configuration {
+    faces: &'static [&'static str],
+    animdur: f32,
+    animation: bool,
+    dicesize: u128,
+}
+
+const DEFAULTCONF: Configuration = Configuration {
+    faces: &["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"],
+    animdur: 0.6,
+    animation: true,
+    dicesize: 6,
+};
+
 fn main() {
-    // TODO: add a way to change these vars
-    let faces = ["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
-    let animdur: f32 = 0.6;
-    let animation = true;
-    let mut dicesize: u128 = 6;
+    // TODO: finish this config
+    let configdat = readconfig("d6.cfg");
+    let config: Configuration = parseconfig(configdat);
+
+    let faces: Vec<&str> = Vec::from(config.faces);
+    let animdur: f32 = config.animdur;
+    let animation: bool = config.animation;
+    let mut dicesize: u128 = config.dicesize;
 
     // if user runs d6 <int>, then set dicesize to the integer
     let args: Vec<String> = env::args().collect();
-    if !args.is_empty() {
+    if args.len() > 1 {
         let intnum = &args[1];
         if isnumeric(intnum) {
             let newnum: u128 = intnum.parse().unwrap();
             if newnum <= 0 {
-                eprintln!("cannot have less than 1 face. rolling a d6.")
+                eprintln!("cannot roll a d0. rolling a d6.")
             } else {
                 dicesize = intnum.parse().unwrap();
             }
@@ -53,10 +70,15 @@ fn main() {
 
     let mixednanos: u128 = bitmixer(nanos);
 
-    let finalroll = (mixednanos % dicesize as u128) as usize;
+    let finalroll: usize = (mixednanos % dicesize as u128) as usize;
+    let finalsymbol: &str = if finalroll > faces.len() {
+        "x"
+    } else {
+        &faces[finalroll]
+    };
     if atty::is(Stream::Stdout) {
         // interactive terminal
-        println!("\r{} ({})", faces[finalroll], finalroll + 1);
+        println!("\r{} ({})", finalsymbol, finalroll + 1);
     } else {
         // only print the value if it is piped
         println!("{}", finalroll + 1);
@@ -67,7 +89,7 @@ fn isnumeric(s: &str) -> bool {
     s.chars().all(|c| c.is_digit(10))
 }
 
-fn bitmixer(mut val: u128) -> u128 {
+fn bitmixer(val: u128) -> u128 {
     // so that multiplying wont make the number go out of bounds
     let mut wrappedval = Wrapping(val);
     // bit mixer to fix the rng
@@ -97,18 +119,18 @@ fn readconfig(filename: &str) -> String {
     }
 }
 
-fn parseconfig(data: String) -> Vec<String> {
+fn parseconfig(data: String) -> Configuration {
     if data.is_empty() {
-        return Vec::new();
+        return DEFAULTCONF;
     }
     for line in data.lines() {
         let parts: Vec<&str> = line.split(':').collect::<Vec<&str>>();
         if parts.len() != 2 {
             eprintln!("config error at: {}", line);
             eprintln!("ignoring config");
-            return Vec::new();
+            return DEFAULTCONF;
         }
         // TODO: parse one line of the config
     }
-    Vec::new()
+    DEFAULTCONF
 }
