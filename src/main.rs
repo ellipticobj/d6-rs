@@ -22,7 +22,6 @@ const DEFAULTCONF: Configuration = Configuration {
 };
 
 fn main() {
-    // TODO: finish this config
     let configdat = readconfig("d6.cfg");
     let config: Configuration = parseconfig(configdat);
 
@@ -120,17 +119,54 @@ fn readconfig(filename: &str) -> String {
 }
 
 fn parseconfig(data: String) -> Configuration {
+    let mut config: Configuration = DEFAULTCONF;
     if data.is_empty() {
         return DEFAULTCONF;
     }
+
     for line in data.lines() {
-        let parts: Vec<&str> = line.split(':').collect::<Vec<&str>>();
+        let parts: Vec<&str> = line.split(':').map(|p| p.trim()).collect::<Vec<&str>>();
+
         if parts.len() != 2 {
-            eprintln!("config error at: {}", line);
+            eprintln!("config error: too many arguments in: '{}'", line);
             eprintln!("ignoring config");
             return DEFAULTCONF;
         }
-        // TODO: parse one line of the config
+
+        match parts[0] {
+            "animation" => match parts[1].parse::<bool>() {
+                Ok(value) => config.animation = value,
+                Err(_) => {
+                    eprintln!(
+                        "config error: invalid boolean for 'animation' at: '{}'",
+                        line
+                    );
+                    eprintln!("ignoring config");
+                    return DEFAULTCONF;
+                }
+            },
+            "animdur" => match parts[1].parse::<f32>() {
+                Ok(value) => config.animdur = value,
+                Err(_) => {
+                    eprintln!("config error: invalid f32 for 'animdur' at: '{}'", line);
+                    eprintln!("ignoring config");
+                    return DEFAULTCONF;
+                }
+            },
+            "dicesize" => match parts[1].parse::<u128>() {
+                Ok(value) => config.dicesize = value,
+                Err(_) => {
+                    eprintln!("config error: invalid u128 for 'dicesize' at: '{}'", line);
+                    eprintln!("ignoring config");
+                    return DEFAULTCONF;
+                }
+            },
+            _ => {
+                eprintln!("config error: invalid token '{}' at: '{}'", parts[0], line);
+                eprintln!("ignoring config");
+                return DEFAULTCONF;
+            }
+        }
     }
-    DEFAULTCONF
+    config
 }
