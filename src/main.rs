@@ -8,26 +8,46 @@ use std::thread::sleep;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 struct Configuration {
-    faces: &'static [&'static str],
+    faces: Vec<String>,
     animdur: f32,
     animation: bool,
+    interval: u64,
     dicesize: u128,
 }
 
-const DEFAULTCONF: Configuration = Configuration {
-    faces: &["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"],
-    animdur: 0.6,
-    animation: true,
-    dicesize: 6,
-};
+const DEFAULTFACES: &[&str; 6] = &["⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+const DEFAULTANIMDUR: f32 = 0.6;
+const DEFAULTANIMATION: bool = true;
+const DEFAULTINTERVAL: u64 = 25;
+const DEFAULTDICESIZE: u128 = 6;
+
+fn getdefaultconf() -> Configuration {
+    Configuration {
+        faces: DEFAULTFACES
+            .iter()
+            .map(|s| String::from(s.to_owned()))
+            .collect(),
+        animdur: DEFAULTANIMDUR,
+        animation: DEFAULTANIMATION,
+        interval: DEFAULTINTERVAL,
+        dicesize: DEFAULTDICESIZE,
+    }
+}
+
+fn configerror(msg: &str) -> Configuration {
+    eprintln!("{}", msg);
+    eprintln!("ignoring config");
+    return getdefaultconf();
+}
 
 fn main() {
     let configdat = readconfig("d6.cfg");
     let config: Configuration = parseconfig(configdat);
 
-    let faces: Vec<&str> = Vec::from(config.faces);
+    let faces: Vec<String> = Vec::from(config.faces);
     let animdur: f32 = config.animdur;
     let animation: bool = config.animation;
+    let interval: u64 = config.interval;
     let mut dicesize: u128 = config.dicesize;
 
     // if user runs d6 <int>, then set dicesize to the integer
@@ -47,7 +67,7 @@ fn main() {
     // only show the animation if animations are enabled and if the terminal is interactive
     if animation && atty::is(Stream::Stdout) {
         let endtime = Instant::now() + Duration::from_secs_f32(animdur);
-        let interval = Duration::from_millis(30);
+        let intervalmil = Duration::from_millis(interval);
         while Instant::now() <= endtime {
             let nanos = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -57,7 +77,7 @@ fn main() {
             let roll = (bitmixer(nanos) % faces.len() as u128) as usize;
             print!("\r{}", faces[roll]);
             io::stdout().flush().unwrap();
-            sleep(interval);
+            sleep(intervalmil);
         }
     }
 
@@ -119,52 +139,87 @@ fn readconfig(filename: &str) -> String {
 }
 
 fn parseconfig(data: String) -> Configuration {
-    let mut config: Configuration = DEFAULTCONF;
+    let mut config: Configuration = getdefaultconf();
     if data.is_empty() {
-        return DEFAULTCONF;
+        return getdefaultconf();
     }
 
     for line in data.lines() {
         let parts: Vec<&str> = line.split(':').map(|p| p.trim()).collect::<Vec<&str>>();
 
         if parts.len() != 2 {
-            eprintln!("config error: too many arguments in: '{}'", line);
-            eprintln!("ignoring config");
-            return DEFAULTCONF;
+            return configerror(&format!("config error: too many arguments at '{}'", line));
         }
 
         match parts[0] {
             "animation" => match parts[1].parse::<bool>() {
                 Ok(value) => config.animation = value,
                 Err(_) => {
-                    eprintln!(
-                        "config error: invalid boolean for 'animation' at: '{}'",
+                    return configerror(&format!(
+                        "config error: invalid boolean for 'animation' at '{}'",
                         line
-                    );
-                    eprintln!("ignoring config");
-                    return DEFAULTCONF;
+                    ));
                 }
             },
             "animdur" => match parts[1].parse::<f32>() {
-                Ok(value) => config.animdur = value,
+                Ok(value) => {
+                    if value <= 0f32 {
+                        return configerror(&format!(
+                            "config error: animdur cannot be less than 1"
+                        ));
+                    }
+                    config.animdur = value
+                }
                 Err(_) => {
-                    eprintln!("config error: invalid f32 for 'animdur' at: '{}'", line);
-                    eprintln!("ignoring config");
-                    return DEFAULTCONF;
+                    return configerror(&format!(
+                        "config error: invalid f32 for 'animdur' at: '{}'",
+                        line
+                    ))
                 }
             },
             "dicesize" => match parts[1].parse::<u128>() {
-                Ok(value) => config.dicesize = value,
+                Ok(value) => {
+                    if value <= 0 {
+                        return configerror("config error: dice cannot have less than 1 side");
+                    }
+                    config.dicesize = value
+                }
                 Err(_) => {
-                    eprintln!("config error: invalid u128 for 'dicesize' at: '{}'", line);
-                    eprintln!("ignoring config");
-                    return DEFAULTCONF;
+                    return configerror(&format!(
+                        "config error: invalid u128 for 'dicesize' at '{}'",
+                        line
+                    ));
                 }
             },
+            "interval" => match parts[1].parse::<u64>() {
+                Ok(value) => {
+                    if value <= 0 {
+                        return configerror("config error: interval cannot be less than 1");
+                    }
+                    config.interval = value
+                }
+                Err(_) => {
+                    return configerror(&format!(
+                        "config error: invalid u128 for 'interval at: '{}'",
+                        line
+                    ));
+                }
+            },
+            "faces" => {
+                let usrfaces: Vec<String> = parts[1]
+                    .trim()
+                    .trim_start_matches('[')
+                    .trim_end_matches(']')
+                    .split(',')
+                    .map(|s| s.trim().to_owned())
+                    .collect();
+                config.faces = usrfaces;
+            }
             _ => {
-                eprintln!("config error: invalid token '{}' at: '{}'", parts[0], line);
-                eprintln!("ignoring config");
-                return DEFAULTCONF;
+                return configerror(&format!(
+                    "config error: invalid token '{}' at '{}'",
+                    parts[0], line
+                ));
             }
         }
     }
