@@ -35,16 +35,16 @@ fn getdefaultconf() -> Configuration {
 }
 
 fn configerror(msg: &str) -> Configuration {
-    eprintln!("{}", msg);
+    eprintln!("config error: {}", msg);
     eprintln!("ignoring config");
-    return getdefaultconf();
+    getdefaultconf()
 }
 
 fn main() {
     let configdat = readconfig("d6.cfg");
     let config: Configuration = parseconfig(configdat);
 
-    let faces: Vec<String> = Vec::from(config.faces);
+    let faces: Vec<String> = config.faces;
     let animdur: f32 = config.animdur;
     let animation: bool = config.animation;
     let interval: u64 = config.interval;
@@ -56,7 +56,7 @@ fn main() {
         let intnum = &args[1];
         if isnumeric(intnum) {
             let newnum: u128 = intnum.parse().unwrap();
-            if newnum <= 0 {
+            if newnum == 0 {
                 eprintln!("cannot roll a d0. rolling a d6.")
             } else {
                 dicesize = intnum.parse().unwrap();
@@ -90,7 +90,7 @@ fn main() {
     let mixednanos: u128 = bitmixer(nanos);
 
     let finalroll: usize = (mixednanos % dicesize as u128) as usize;
-    let finalsymbol: &str = if finalroll > faces.len() {
+    let finalsymbol: &str = if finalroll >= faces.len() {
         "x"
     } else {
         &faces[finalroll]
@@ -105,7 +105,7 @@ fn main() {
 }
 
 fn isnumeric(s: &str) -> bool {
-    s.chars().all(|c| c.is_digit(10))
+    s.chars().all(|c| c.is_ascii_digit())
 }
 
 fn bitmixer(val: u128) -> u128 {
@@ -132,10 +132,7 @@ fn readconfig(filename: &str) -> String {
     filepath.push(".config/");
     filepath.push(filename);
 
-    match fs::read_to_string(&filepath) {
-        Ok(data) => data,
-        Err(_) => String::new(),
-    }
+    fs::read_to_string(&filepath).unwrap_or_default()
 }
 
 fn parseconfig(data: String) -> Configuration {
@@ -148,61 +145,45 @@ fn parseconfig(data: String) -> Configuration {
         let parts: Vec<&str> = line.split(':').map(|p| p.trim()).collect::<Vec<&str>>();
 
         if parts.len() != 2 {
-            return configerror(&format!("config error: too many arguments at '{}'", line));
+            return configerror(&format!("too many arguments at '{}'", line));
         }
 
         match parts[0] {
             "animation" => match parts[1].parse::<bool>() {
                 Ok(value) => config.animation = value,
                 Err(_) => {
-                    return configerror(&format!(
-                        "config error: invalid boolean for 'animation' at '{}'",
-                        line
-                    ));
+                    return configerror(&format!("invalid boolean for 'animation' at '{}'", line));
                 }
             },
             "animdur" => match parts[1].parse::<f32>() {
                 Ok(value) => {
                     if value <= 0f32 {
-                        return configerror(&format!(
-                            "config error: animdur cannot be less than 1"
-                        ));
+                        return configerror("animdur cannot be less than 1");
                     }
                     config.animdur = value
                 }
-                Err(_) => {
-                    return configerror(&format!(
-                        "config error: invalid f32 for 'animdur' at: '{}'",
-                        line
-                    ))
-                }
+                Err(_) => return configerror(&format!("invalid f32 for 'animdur' at: '{}'", line)),
             },
             "dicesize" => match parts[1].parse::<u128>() {
                 Ok(value) => {
-                    if value <= 0 {
-                        return configerror("config error: dice cannot have less than 1 side");
+                    if value == 0 {
+                        return configerror("dice cannot have less than 1 side");
                     }
                     config.dicesize = value
                 }
                 Err(_) => {
-                    return configerror(&format!(
-                        "config error: invalid u128 for 'dicesize' at '{}'",
-                        line
-                    ));
+                    return configerror(&format!("invalid u128 for 'dicesize' at '{}'", line));
                 }
             },
             "interval" => match parts[1].parse::<u64>() {
                 Ok(value) => {
-                    if value <= 0 {
-                        return configerror("config error: interval cannot be less than 1");
+                    if value == 0 {
+                        return configerror("interval cannot be less than 1");
                     }
                     config.interval = value
                 }
                 Err(_) => {
-                    return configerror(&format!(
-                        "config error: invalid u128 for 'interval at: '{}'",
-                        line
-                    ));
+                    return configerror(&format!("invalid u128 for 'interval at: '{}'", line));
                 }
             },
             "faces" => {
@@ -216,10 +197,7 @@ fn parseconfig(data: String) -> Configuration {
                 config.faces = usrfaces;
             }
             _ => {
-                return configerror(&format!(
-                    "config error: invalid token '{}' at '{}'",
-                    parts[0], line
-                ));
+                return configerror(&format!("invalid token '{}' at '{}'", parts[0], line));
             }
         }
     }

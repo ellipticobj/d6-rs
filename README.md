@@ -4,6 +4,8 @@ tiny, lightweight diceroll program
 made this cuz i found out dice symbols exist
 
 ## installation and usage
+prerequisites: cargo >= 1.87.x
+
 clone this repo
 ```
 git clone https://github.com/ellipticobj/d6-rs.git && cd d6-rs
@@ -62,7 +64,6 @@ faces: <char>,<char>,...
 made with rust btw haha
 
 ## plans !
-- [ ] add color?
 - [x] add more robust checks for custom dice sizes
 - [x] finish cofiguration for faces, animation frame intervals
 - [x] customization? (animation time, output options, symbols)
