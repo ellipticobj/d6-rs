@@ -41,12 +41,13 @@ fn configerror(msg: &str) -> Configuration {
 }
 
 fn main() {
-    let configdat = readconfig("d6.cfg");
-    let config: Configuration = parseconfig(configdat);
+    // let configdat = readconfig("d6.cfg");
+    // let config: Configuration = parseconfig(configdat);
+    let config = getdefaultconf();
 
     let faces: Vec<String> = config.faces;
     let animdur: f32 = config.animdur;
-    let animation: bool = config.animation;
+    let animation: bool = false;
     let interval: u64 = config.interval;
     let mut dicesize: u128 = config.dicesize;
 

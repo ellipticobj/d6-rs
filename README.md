@@ -3,6 +3,17 @@
 tiny, lightweight diceroll program
 made this cuz i found out dice symbols exist
 
+## usage
+normal usage
+```
+d6
+```
+
+specific number of faces
+```
+d6 <int>
+```
+
 ## installation and usage
 prerequisites: cargo >= 1.87.x
 
